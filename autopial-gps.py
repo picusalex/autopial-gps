@@ -20,10 +20,11 @@ steam_handler.setFormatter(stream_formatter)
 logger.addHandler(steam_handler)
 
 class GPSWorker(AutopialWorker):
-    def __init__(self, tty, mqtt_client, time_sleep):
+    def __init__(self, tty, baudrate, mqtt_client, time_sleep):
         AutopialWorker.__init__(self, mqtt_client, time_sleep, logger=logger)
         logger.info("GPSWorker init with {}".format(tty))
         self._tty = tty
+        self._baudrate = baudrate
         self.gps_conn = None
         self.gps_connect()
 
@@ -38,7 +39,7 @@ class GPSWorker(AutopialWorker):
         try:
             self.gps_conn = serial.Serial(
                 self._tty,
-                115200,
+                self._baudrate,
                 timeout=0,
                 bytesize=serial.EIGHTBITS,
                 parity=serial.PARITY_NONE,
@@ -114,13 +115,14 @@ class GPSWorker(AutopialWorker):
 if __name__ == '__main__':
     cfg = ConfigFile("autopial-gps.cfg", logger=logger)
     try:
-        tty = cfg.get("gps_device")
+        tty = cfg.get("gps_device", "port")
+        baudrate = cfg.get("gps_device", "baudrate")
         publish_every = cfg.get("publish_every")
     except BaseException as e:
         logger.error("Invalid config file: {}".format(e))
         sys.exit(1)
 
-    worker_gps = GPSWorker(tty, "GPSWorker", time_sleep=publish_every)
+    worker_gps = GPSWorker(tty, baudrate, "GPSWorker", time_sleep=publish_every)
     worker_gps.start()
 
     try:
